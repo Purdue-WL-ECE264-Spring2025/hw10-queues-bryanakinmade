@@ -1,16 +1,15 @@
 #include "queue.h"
 #include "tile_game.h"
 #include <stdbool.h>
-#include <stdlib.h>
 
-bool is_solved(const struct game_state *state) {
-    const uint8_t solved[4][4] = {
+static bool is_solved(struct game_state *state) {
+    uint8_t solved[4][4] = {
         {1, 2, 3, 4},
         {5, 6, 7, 8},
         {9, 10, 11, 12},
         {13, 14, 15, 0}
     };
-
+    
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             if (state->tiles[i][j] != solved[i][j]) {
@@ -35,61 +34,54 @@ int number_of_moves(struct game_state start) {
     if (is_solved(&start)) {
         return 0;
     }
-
+    
     struct queue q = {0};
     enqueue(&q, start);
-
+    
     while (q.data.head) {
         struct game_state current = dequeue(&q);
-
-        // Try all possible moves
-        struct game_state new_state;
-
-        // Try moving up
-        new_state = current;
-        move_up(&new_state);
-        if (is_solved(&new_state)) {
+        
+        struct game_state up = current;
+        move_up(&up);
+        if (is_solved(&up)) {
             free_list(q.data);
-            return new_state.num_steps;
+            return up.num_steps;
         }
-        if (new_state.num_steps > current.num_steps) {
-            enqueue(&q, new_state);
+        if (up.num_steps > current.num_steps) {
+            enqueue(&q, up);
         }
-
-        // Try moving down
-        new_state = current;
-        move_down(&new_state);
-        if (is_solved(&new_state)) {
+        
+        struct game_state down = current;
+        move_down(&down);
+        if (is_solved(&down)) {
             free_list(q.data);
-            return new_state.num_steps;
+            return down.num_steps;
         }
-        if (new_state.num_steps > current.num_steps) {
-            enqueue(&q, new_state);
+        if (down.num_steps > current.num_steps) {
+            enqueue(&q, down);
         }
-
-        // Try moving left
-        new_state = current;
-        move_left(&new_state);
-        if (is_solved(&new_state)) {
+        
+        struct game_state left = current;
+        move_left(&left);
+        if (is_solved(&left)) {
             free_list(q.data);
-            return new_state.num_steps;
+            return left.num_steps;
         }
-        if (new_state.num_steps > current.num_steps) {
-            enqueue(&q, new_state);
+        if (left.num_steps > current.num_steps) {
+            enqueue(&q, left);
         }
-
-        // Try moving right
-        new_state = current;
-        move_right(&new_state);
-        if (is_solved(&new_state)) {
+        
+        struct game_state right = current;
+        move_right(&right);
+        if (is_solved(&right)) {
             free_list(q.data);
-            return new_state.num_steps;
+            return right.num_steps;
         }
-        if (new_state.num_steps > current.num_steps) {
-            enqueue(&q, new_state);
+        if (right.num_steps > current.num_steps) {
+            enqueue(&q, right);
         }
     }
-
+    
     free_list(q.data);
-    return -1; // No solution found
+    return -1;
 }
