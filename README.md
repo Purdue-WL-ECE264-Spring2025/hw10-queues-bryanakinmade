@@ -129,6 +129,6 @@ Your implementation is across two files:
   - Implement a function to free a linked list
 - In `queue.c`:
   - Use your linked list and the `serialize`/`deserialize` functions to implement `enqueue` and `dequeue`
-  - Use the queue to implement a BFS that determines the shortest `number_of_moves` required to solve a Tiles game
+  - Use the queue to implement a BFS tha t determines the shortest `number_of_moves` required to solve a Tiles game
 
 You only need to submit `linked_list.c` and `queue.c`. DO NOT edit the functions in `tile_game.c`
