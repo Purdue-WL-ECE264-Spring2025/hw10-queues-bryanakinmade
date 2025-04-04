@@ -1,8 +1,55 @@
 #include "queue.h"
 #include "tile_game.h"
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-// Helper function to check if board is solved
+#define HASH_SIZE 1000003  // Large prime number for hash table
+
+typedef struct hash_entry {
+    uint64_t key;
+    struct hash_entry *next;
+} hash_entry;
+
+typedef struct {
+    hash_entry **entries;
+} hash_table;
+
+hash_table *create_hash_table() {
+    hash_table *ht = malloc(sizeof(hash_table));
+    ht->entries = calloc(HASH_SIZE, sizeof(hash_entry*));
+    return ht;
+}
+
+void free_hash_table(hash_table *ht) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        hash_entry *entry = ht->entries[i];
+        while (entry) {
+            hash_entry *next = entry->next;
+            free(entry);
+            entry = next;
+        }
+    }
+    free(ht->entries);
+    free(ht);
+}
+
+bool hash_insert(hash_table *ht, uint64_t key) {
+    uint64_t index = key % HASH_SIZE;
+    hash_entry *entry = ht->entries[index];
+    
+    while (entry) {
+        if (entry->key == key) return false;
+        entry = entry->next;
+    }
+    
+    hash_entry *new_entry = malloc(sizeof(hash_entry));
+    new_entry->key = key;
+    new_entry->next = ht->entries[index];
+    ht->entries[index] = new_entry;
+    return true;
+}
+
 bool is_solved(const struct game_state *state) {
     const uint8_t solved[4][4] = {
         {1, 2, 3, 4},
@@ -33,26 +80,19 @@ struct game_state dequeue(struct queue *q) {
 
 int number_of_moves(struct game_state start) {
     struct queue q = {0};
+    hash_table *visited = create_hash_table();
     enqueue(&q, start);
-    
-    // Visited tracking (using a simple hash set)
-    #define VISITED_SIZE (1 << 20) // ~1 million entries
-    bool *visited = calloc(VISITED_SIZE, sizeof(bool));
+    hash_insert(visited, serialize(start));
     
     while (q.list.head) {
         struct game_state current = dequeue(&q);
-        uint64_t hash = serialize(current) % VISITED_SIZE;
         
         if (is_solved(&current)) {
             free_list(q.list);
-            free(visited);
+            free_hash_table(visited);
             return current.num_steps;
         }
         
-        if (visited[hash]) continue;
-        visited[hash] = true;
-        
-        // Generate all possible moves
         int directions[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         
         for (int i = 0; i < 4; i++) {
@@ -61,7 +101,6 @@ int number_of_moves(struct game_state start) {
             
             if (new_row >= 0 && new_row < 4 && new_col >= 0 && new_col < 4) {
                 struct game_state new_state = current;
-                // Swap tiles
                 new_state.tiles[current.empty_row][current.empty_col] = 
                     current.tiles[new_row][new_col];
                 new_state.tiles[new_row][new_col] = 0;
@@ -69,8 +108,8 @@ int number_of_moves(struct game_state start) {
                 new_state.empty_col = new_col;
                 new_state.num_steps++;
                 
-                uint64_t new_hash = serialize(new_state) % VISITED_SIZE;
-                if (!visited[new_hash]) {
+                uint64_t serialized = serialize(new_state);
+                if (hash_insert(visited, serialized)) {
                     enqueue(&q, new_state);
                 }
             }
@@ -78,6 +117,6 @@ int number_of_moves(struct game_state start) {
     }
     
     free_list(q.list);
-    free(visited);
-    return -1; // No solution found
+    free_hash_table(visited);
+    return -1;
 }
